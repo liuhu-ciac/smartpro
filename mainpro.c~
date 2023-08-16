@@ -1,0 +1,336 @@
+#include <pthread.h>
+#include "ControlDevice.h"
+#include "InputCommand.h"
+
+struct InputCommand *pcommandHead = NULL;				              //Â¶Â¨ÃÃ¥ÃÂ¸ÃÃ®Â¹Â¤Â³Â§Â³ÃµÃÂ¼ÃÂ´Â±Ã­ÃÂ·
+struct Devices      *pdeviceHead  = NULL;				              //Â¶Â¨ÃÃ¥ÃÃ¨Â±Â¸Â¹Â¤Â³Â§Â³ÃµÃÂ¼ÃÂ´Â±Ã­ÃÂ·
+struct InputCommand *socketHandler = NULL;
+char ocrRetBuf[1024] = {'\0'}; 
+struct Devices* findDeviceByName(char *name, struct Devices *phead)
+{
+	struct Devices *tmp =phead;
+	if(phead == NULL){
+		return NULL;
+	}else{
+		while(tmp != NULL){
+			if(strcmp(tmp->deviceName,name)==0){
+				return tmp;
+			}
+			tmp = tmp->next;
+		}
+		return NULL;
+	}
+}
+char *strstr2(char *str, char *strSearch){
+	char *strTemp;
+	char *strSearchTemp;
+	while(*str!='\0'){
+		strTemp=str;
+		strSearchTemp=strSearch;
+		while((*strTemp==*strSearchTemp)&&(*strTemp!='\0')&&(*strSearchTemp!='\0')){
+			strTemp++;strSearchTemp++;
+		}
+		if(*strSearchTemp=='\0')
+			return str;
+		unsigned char code = *str;
+		if(code>=0x80)
+			str += 2;
+		else
+			str++;
+	}
+	return NULL;
+}  
+struct InputCommand* findCommandByName(char *name, struct InputCommand *phead)
+{
+	struct InputCommand *tmp =phead;
+	if(phead == NULL){
+		return NULL;
+	}else{
+		while(tmp != NULL){
+			if(strcmp(tmp->commandName,name)==0){
+				return tmp;
+			}
+			tmp = tmp->next;
+		}
+		return NULL;
+	}
+}
+
+void Command(struct InputCommand* CmdHandler)
+{
+	struct Devices *tmp =NULL;
+
+	if(strcmp("CSHALL",CmdHandler->command) == 0){
+		tmp = findDeviceByName("smokeAlarm",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum);
+		tmp = findDeviceByName("buzzer",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum);
+		tmp = findDeviceByName("livingroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum); 
+		tmp = findDeviceByName("restaurantLight",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum);
+		tmp = findDeviceByName("bedroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum);
+		tmp = findDeviceByName("bathroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum);
+		tmp = findDeviceByName("swimpoolLight",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum);
+		tmp = findDeviceByName("lock",pdeviceHead);
+		if(tmp != NULL)  tmp->Init(tmp->pinNum);
+		printf("Initial device has been done.\n");
+	}
+	if(strcmp("OL1",CmdHandler->command) == 0){
+		tmp = findDeviceByName("livingroomLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->open(tmp->pinNum);
+			printf("Open livingroom Light.\n");
+		}
+	}
+	if(strcmp("CL1",CmdHandler->command) == 0){
+		tmp = findDeviceByName("livingroomLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->close(tmp->pinNum);
+			printf("Close livingroom Light.\n");
+		}
+	}
+	if(strcmp("OL2",CmdHandler->command) == 0){
+		tmp = findDeviceByName("restaurantLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->open(tmp->pinNum);
+			printf("Open restaurant Light.\n");
+		}
+	}
+	if(strcmp("CL2",CmdHandler->command) == 0){
+		tmp = findDeviceByName("restaurantLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->close(tmp->pinNum);
+			printf("Close restaurant Light.\n");
+		}
+	}
+	if(strcmp("OL3",CmdHandler->command) == 0){
+		tmp = findDeviceByName("bedroomLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->open(tmp->pinNum);
+			printf("Open bedroom Light.\n");
+		}
+	}
+	if(strcmp("CL3",CmdHandler->command) == 0){
+		tmp = findDeviceByName("bedroomLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->close(tmp->pinNum);
+			printf("Close bedroom Light.\n");
+		}
+	}
+	if(strcmp("OL4",CmdHandler->command) == 0){
+		tmp = findDeviceByName("bathroomLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->open(tmp->pinNum);
+			printf("Open bathroom Light.\n");
+		}
+	}
+	if(strcmp("CL4",CmdHandler->command) == 0){
+		tmp = findDeviceByName("bathroomLight",pdeviceHead);
+		if(tmp != NULL){
+			tmp->close(tmp->pinNum);
+			printf("Close bathroom Light.\n");
+		}
+	}
+	if(strcmp("CD",CmdHandler->command) == 0){
+		tmp = findDeviceByName("lock",pdeviceHead);
+		if(tmp != NULL){
+			tmp->close(tmp->pinNum);
+			printf("Close door.\n");
+		}
+	}
+	if(strcmp("OLALL",CmdHandler->command) == 0){
+		tmp = findDeviceByName("livingroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->open(tmp->pinNum);
+		tmp = findDeviceByName("restaurantLight",pdeviceHead);
+		if(tmp != NULL)  tmp->open(tmp->pinNum);
+		tmp = findDeviceByName("bedroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->open(tmp->pinNum);
+		tmp = findDeviceByName("bathroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->open(tmp->pinNum);
+		tmp = findDeviceByName("swimpoolLight",pdeviceHead);
+		if(tmp != NULL)  tmp->open(tmp->pinNum);
+		printf("Open all Light.\n");
+	}
+	if(strcmp("CLALL",CmdHandler->command) == 0){
+		tmp = findDeviceByName("livingroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->close(tmp->pinNum);
+		tmp = findDeviceByName("restaurantLight",pdeviceHead);
+		if(tmp != NULL)  tmp->close(tmp->pinNum);
+		tmp = findDeviceByName("bedroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->close(tmp->pinNum);
+		tmp = findDeviceByName("bathroomLight",pdeviceHead);
+		if(tmp != NULL)  tmp->close(tmp->pinNum);
+		tmp = findDeviceByName("swimpoolLight",pdeviceHead);
+		if(tmp != NULL)  tmp->close(tmp->pinNum);
+		printf("Close all Light.\n");
+	}
+	if(strcmp("OCR",CmdHandler->command) == 0){
+		tmp = findDeviceByName("camera",pdeviceHead);
+		if(tmp != NULL){
+			tmp->justDoOnce();
+			if(strstr2(ocrRetBuf,"否") != NULL){   
+				printf("人脸识别失败\n");
+                unsigned char VoiceSendCmd[6] = {0xAA,0x55,0x02,0x00,0x55,0xAA};
+                int nwrite = write(CmdHandler->fd,VoiceSendCmd,6*sizeof(VoiceSendCmd[0]));
+                //if(nwrite ==-1)
+                printf("Send voice cmd %d bytes.\n",nwrite);
+			}else{
+				printf("人脸识别成功\n");
+                unsigned char VoiceSendCmd[6] = {0xAA,0x55,0x01,0x00,0x55,0xAA};
+                int nwrite = write(CmdHandler->fd,VoiceSendCmd,6*sizeof(VoiceSendCmd[0]));
+                //if(nwrite ==-1)
+                printf("Send voice cmd %d bytes.\n",nwrite);
+                tmp = findDeviceByName("lock",pdeviceHead);
+				if(tmp != NULL){
+					tmp->open(tmp->pinNum);
+					printf("开门\n");
+					delay(3000);
+					tmp->close(tmp->pinNum);
+				}
+			}
+		}
+	}
+}
+
+void *voiceControlThread(void *data)			//Â¡Â°ÃÃ¯ÃÃ´Â¿ÃÃÃÃÃÂ³ÃÂ¡Â±ÃÂ´ÃÃÂºÂ¯ÃÃ½
+{   
+	int nread;
+	struct InputCommand *voiceHandler = NULL;
+	voiceHandler =  findCommandByName("voice", pcommandHead);
+
+	if(voiceHandler == NULL){
+		printf("find voiceHandler error\n");
+		pthread_exit(NULL);
+	}else{
+		if(voiceHandler->Init(voiceHandler) < 0){       //Â¡Â°ÃÃ¯ÃÃ´Â¿ÃÃÃÂ¡Â±Â¹Â¦ÃÃÂ³ÃµÃÂ¼Â»Â¯
+			printf("voiceControl init error\n");
+			pthread_exit(NULL);
+		}else{
+			printf("voiceControl init success\n");
+		}
+		while(1){
+			memset(voiceHandler->command,'\0',sizeof(voiceHandler->command));
+			nread = voiceHandler->getCommand(voiceHandler);
+			if(nread == 0){                                 //Â´Â®Â¿ÃÃÂ»ÃÃÂ»Ã±ÃÂ¡ÂµÂ½ÃÂ¸ÃÃ®
+				printf("No voiceCommand received\n");
+			}else{											//Â»Ã±ÃÂ¡ÂµÂ½ÃÂ¸ÃÃ®
+				printf("Get VoiceCommand -->%s\n",voiceHandler->command);
+				Command(voiceHandler);
+			}
+		}   
+	}
+}
+
+void *socketReadThread(void *data)				//Â¡Â°Â¶ÃÃÂ¡tcpÂ¶ÃÂ¿ÃÃÂ¸ÃÃ®ÃÃÂ³ÃÂ¡Â±ÃÂ´ÃÃÂµÃÂºÂ¯ÃÃ½
+{
+	int n_read;
+	printf("Connect success\n");
+	while(1){
+		memset(socketHandler->command,'\0',sizeof(socketHandler->command));
+		n_read=read(socketHandler->fd,socketHandler->command,sizeof(socketHandler->command));
+		if(n_read == -1){
+			perror("read:");
+		}else{
+			printf("Get SocketCommand-->%s\n",socketHandler->command);
+			Command(socketHandler);
+		}
+	}
+}
+
+
+void *socketControlThread(void *data)           //Â¡Â°ÃÃ¸ÃÃ§Â¿ÃÃÃÃÃÂ³ÃÂ¡Â±ÃÂ´ÃÃÂµÃÂºÂ¯ÃÃ½
+{   
+	int c_fd;                           //ÃÃÂ¼Ã¾ÃÃ¨ÃÃ¶Â·Ã»
+	struct sockaddr_in c_addr;
+	memset(&c_addr,0,sizeof(struct sockaddr_in));
+	int clen = sizeof(struct sockaddr_in);
+
+	pthread_t socketRead_thread; //ÃÃÂ³ÃÃÃ¯ÃÃ¦ÃÃÃÃÂ³ÃÂ£Â¬ÃÃ¸ÃÃ§ÃÂ¬Â½ÃÂºÃ³ÃÃÃÂ¢ÃÂ¨ÃÃ
+
+	socketHandler =  findCommandByName("socket", pcommandHead);
+
+	if(socketHandler == NULL){
+		printf("find socketHandler error\n");
+		pthread_exit(NULL);
+	}
+	if(socketHandler->Init(socketHandler) < 0){   //Â¡Â°ÃÃ¸ÃÃ§Â¿ÃÃÃÂ¡Â±Â¹Â¦ÃÃÂ³ÃµÃÂ¼Â»Â¯
+		printf("socketControl init error\n");
+		pthread_exit(NULL);
+	}else{
+		printf("socketControl init success\n");
+	}
+	while(1){
+		//4.accept
+		c_fd = accept(socketHandler->s_fd,(struct sockaddr *)&c_addr,&clen);	//Â½ÃÃÃÃÂ¬Â½ÃÃÃ«ÃÃ³Â£Â¬ÃÃ¨ÃÃ»ÃÃÃÃÂ¿ÃÂ»Â§Â¶ÃÃÃªÂ³ÃÃÃ½Â´ÃÃÃÃÃ
+		socketHandler->fd = c_fd;					                            //Â½Â«ÃÃÂ½ÃÃÃÃÃ¨ÃÃ¶Â·Ã»Â·ÂµÂ»ÃÂ¸Ã¸Â¡Â°ÃÃ¸ÃÃ§Â¿ÃÃÃÂ¡Â±ÃÂ´Â±Ã­Â½ÃÂµÃ£
+		pthread_create(&socketRead_thread,NULL,socketReadThread,NULL);			//Â´Â´Â½Â¨ÃÃÃÃÂ³ÃÂ£ÂºÃÃÃÃÂ¶ÃÃÂ¡TCPÂ¶ÃÂ¿ÃÃÂ¸ÃÃ®
+	}
+}
+
+void *smokeAlarmThread(void *data)               //Â¡Â°ÃÃÃÃ­Â±Â¨Â¾Â¯ÃÃ·ÃÃÂ³ÃÂ¡Â±ÃÂ´ÃÃÂµÃÂºÂ¯ÃÃ½
+{
+	int smokeStatus;												//Â´Ã¦Â·ÃÂ¡Â°ÃÃÃÃ­Â´Â«Â¸ÃÃÃ·Â¡Â±ÃÂ´ÃÂ¬
+	struct Devices *tmp = NULL;
+
+	while(1){
+		tmp = findDeviceByName("smokeAlarm", pdeviceHead);
+		if(tmp != NULL){
+			smokeStatus = tmp->readStatus(tmp->pinNum);
+			delay(100);
+			tmp = findDeviceByName("buzzer", pdeviceHead);
+			if(tmp != NULL){
+				if( smokeStatus == 0 ){
+					tmp->close(tmp->pinNum);
+				}else{
+					tmp->close(tmp->pinNum);
+				}           
+			}
+		}
+	}
+}
+
+int main()
+{
+	if (wiringPiSetup () == -1) { 
+		fprintf (stdout, "Unable to start wiringPi: %s\n", strerror (errno)) ; 
+		return 1 ; 
+	}
+
+	pthread_t voiceControl_thread;
+	pthread_t socketControl_thread;
+	pthread_t smokeAlarm_thread;
+
+	//1.ÃÂ¸ÃÃ®Â¹Â¤Â³Â§Â³ÃµÃÂ¼Â»Â¯
+	pcommandHead = addVoiceControlToInputCommandLink(pcommandHead);
+	pcommandHead = addSocketControlToInputCommandLink(pcommandHead);
+
+	//2.ÃÃ¨Â±Â¸Â¿ÃÃÃÂ¹Â¤Â³Â§Â³ÃµÃÂ¼Â»Â¯
+	pdeviceHead = addBathroomLightToDeviceLink(pdeviceHead);            //Â¡Â°ÃÂ¡ÃÃÂµÃÂ¡Â±Â¼ÃÃÃ«ÃÃ¨Â±Â¸ÃÂ´Â±Ã­
+	pdeviceHead = addBedroomLightToDeviceLink(pdeviceHead);
+	pdeviceHead = addRestaurantLightToDeviceLink(pdeviceHead);
+	pdeviceHead = addLivingroomLightToDeviceLink(pdeviceHead);
+	pdeviceHead = addSmokeAlarmToDeviceLink(pdeviceHead);
+	pdeviceHead = addBuzzerToDeviceLink(pdeviceHead);
+	pdeviceHead = addSwimpoolLightToDeviceLink(pdeviceHead);
+	pdeviceHead = addLockToDeviceLink(pdeviceHead);
+	pdeviceHead = addCameraToDeviceLink(pdeviceHead);
+
+	//3.ÃÃÂ³ÃÂ³ÃÂ½Â¨ÃÂ¢  int pthread_create(pthread_t *restrict tidp, const pthread_attr_t *restrict attr, void *(*start_rtn)(void *), void *restrict arg); 
+	//3.1 ÃÃ¯ÃÃ´ÃÃÂ³Ã
+	pthread_create(&voiceControl_thread,NULL,voiceControlThread,NULL);
+	//3.2 socketÃÃÂ³Ã
+	pthread_create(&socketControl_thread,NULL,socketControlThread,NULL);
+	//3.3 ÃÃÃÃ­Â±Â¨Â¾Â¯ÃÃÂ³Ã
+	pthread_create(&smokeAlarm_thread,NULL,smokeAlarmThread,NULL);
+	//3.4 ÃÃ£ÃÃ±ÃÂ·ÃÃÂ³Ã
+
+	pthread_join(voiceControl_thread, NULL);		//ÃÃ·ÂºÂ¯ÃÃ½ÂµÃÂ´Ã½ÃÃÂ³ÃÃÃÂ³Ã¶
+	pthread_join(socketControl_thread, NULL);		//ÃÃ·ÂºÂ¯ÃÃ½ÂµÃÂ´Ã½ÃÃÂ³ÃÃÃÂ³Ã¶
+	pthread_join(smokeAlarm_thread, NULL);			//ÃÃ·ÂºÂ¯ÃÃ½ÂµÃÂ´Ã½ÃÃÂ³ÃÃÃÂ³Ã¶
+
+	return 0;
+}
